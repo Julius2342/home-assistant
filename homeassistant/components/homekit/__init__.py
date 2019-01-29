@@ -129,6 +129,9 @@ def get_accessory(hass, driver, state, aid, config):
         if device_class == 'garage' and \
                 features & (cover.SUPPORT_OPEN | cover.SUPPORT_CLOSE):
             a_type = 'GarageDoorOpener'
+        elif device_class == 'window' and \
+                features & cover.SUPPORT_SET_POSITION:
+            a_type = 'Window'
         elif features & cover.SUPPORT_SET_POSITION:
             a_type = 'WindowCovering'
         elif features & (cover.SUPPORT_OPEN | cover.SUPPORT_CLOSE):

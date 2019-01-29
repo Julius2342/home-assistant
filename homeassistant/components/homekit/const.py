@@ -72,6 +72,7 @@ SERV_TEMPERATURE_SENSOR = 'TemperatureSensor'
 SERV_THERMOSTAT = 'Thermostat'
 SERV_VALVE = 'Valve'
 SERV_WINDOW_COVERING = 'WindowCovering'
+SERV_WINDOW = 'Window'
 
 # #### Characteristics ####
 CHAR_ACTIVE = 'Active'

@@ -1,7 +1,8 @@
 """Class to hold all cover accessories."""
 import logging
 
-from pyhap.const import CATEGORY_GARAGE_DOOR_OPENER, CATEGORY_WINDOW_COVERING
+from pyhap.const import (CATEGORY_GARAGE_DOOR_OPENER, CATEGORY_WINDOW_COVERING,
+                         CATEGORY_WINDOW)
 
 from homeassistant.components.cover import (
     ATTR_CURRENT_POSITION, ATTR_POSITION, DOMAIN, SUPPORT_STOP)
@@ -15,7 +16,8 @@ from .accessories import debounce, HomeAccessory
 from .const import (
     CHAR_CURRENT_DOOR_STATE, CHAR_CURRENT_POSITION, CHAR_POSITION_STATE,
     CHAR_TARGET_DOOR_STATE, CHAR_TARGET_POSITION,
-    SERV_GARAGE_DOOR_OPENER, SERV_WINDOW_COVERING)
+    SERV_GARAGE_DOOR_OPENER, SERV_WINDOW_COVERING,
+    SERV_WINDOW)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -63,6 +65,45 @@ class GarageDoorOpener(HomeAccessory):
             if not self._flag_state:
                 self.char_target_state.set_value(current_state)
             self._flag_state = False
+
+
+@TYPES.register('Window')
+class Window(HomeAccessory):
+    """Generate a Window accessory for a window entity.
+
+    The window entity must support: set_position.
+    """
+
+    def __init__(self, *args):
+        """Initialize a Window accessory object."""
+        super().__init__(*args, category=CATEGORY_WINDOW)
+        self._homekit_target = None
+
+        serv_window = self.add_preload_service(SERV_WINDOW)
+        self.char_current_position = serv_window.configure_char(
+            CHAR_CURRENT_POSITION, value=0)
+        self.char_target_position = serv_window.configure_char(
+            CHAR_TARGET_POSITION, value=0, setter_callback=self.move_window)
+
+    @debounce
+    def move_window(self, value):
+        """Move window to value if call came from HomeKit."""
+        _LOGGER.debug('%s: Set position to %d', self.entity_id, value)
+        self._homekit_target = value
+
+        params = {ATTR_ENTITY_ID: self.entity_id, ATTR_POSITION: value}
+        self.call_service(DOMAIN, SERVICE_SET_COVER_POSITION, params, value)
+
+    def update_state(self, new_state):
+        """Update window position after state changed."""
+        current_position = new_state.attributes.get(ATTR_CURRENT_POSITION)
+        if isinstance(current_position, int):
+            self.char_current_position.set_value(current_position)
+            if self._homekit_target is None or \
+                    abs(current_position - self._homekit_target) < 6:
+                self.char_target_position.set_value(current_position)
+                self._homekit_target = None
+
 
 
 @TYPES.register('WindowCovering')
